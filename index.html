@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package.json Security Checker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #d32f2f;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        
+        .upload-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .file-input {
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+        
+        .json-input {
+            width: 100%;
+            height: 300px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        
+        .button {
+            background-color: #1976d2;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .button:hover {
+            background-color: #1565c0;
+        }
+        
+        .button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .suspicious-package {
+            background-color: #ffebee;
+            border-left: 4px solid #d32f2f;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .suspicious-package strong {
+            color: #d32f2f;
+            font-size: 16px;
+        }
+        
+        .package-info {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .stats {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .clear-btn {
+            background-color: #757575;
+        }
+        
+        .clear-btn:hover {
+            background-color: #616161;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Package.json Security Checker</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Kontrola podozrivých balíčkov v package.json a package-lock.json súboroch
+        </p>
+        
+        <div class="upload-section">
+            <h3>📁 Nahrať súbor alebo vložiť obsah</h3>
+            
+            <div>
+                <label for="fileInput"><strong>Nahrať súbor:</strong></label>
+                <input type="file" id="fileInput" class="file-input" accept=".json" multiple>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <label for="jsonContent"><strong>Alebo vložte JSON obsah manuálne:</strong></label>
+                <textarea id="jsonContent" class="json-input" placeholder='Vložte obsah package.json alebo package-lock.json súboru...'></textarea>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="button" onclick="checkPackages()">🔍 Skontrolovať balíčky</button>
+                <button class="button clear-btn" onclick="clearAll()">🗑️ Vymazať</button>
+            </div>
+        </div>
+        
+        <div id="results" class="results"></div>
+        
+        <div class="upload-section" style="margin-top: 30px;">
+            <h3>📋 Zoznam všetkých podozrivých balíčkov</h3>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <button class="button" onclick="toggleSuspiciousList()">📋 Zobraziť/Skryť zoznam (527 balíčkov)</button>
+                <button class="button" onclick="copySuspiciousList()">📋 Kopírovať do schránky</button>
+            </div>
+            <div id="suspiciousList" style="display: none;">
+                <textarea id="suspiciousListContent" class="json-input" style="height: 200px;" readonly></textarea>
+            </div>
+        </div>
+        
+        <div class="upload-section" style="margin-top: 30px;">
+            <h3>🔧 Debug výstup</h3>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <button class="button" onclick="toggleDebug()">🔧 Zobraziť/Skryť debug log</button>
+                <button class="button clear-btn" onclick="clearDebug()">🗑️ Vymazať log</button>
+            </div>
+            <div id="debugSection" style="display: none;">
+                <textarea id="debugOutput" class="json-input" style="height: 250px; font-size: 11px;" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Zoznam podozrivých balíčkov
+        const suspiciousPackages = [
+            '@ahmedhfarag/ngx-perfect-scrollbar@20.0.20',
+            '@ahmedhfarag/ngx-virtual-scroller@4.0.4',
+            '@art-ws/common@2.0.28',
+            '@art-ws/config-eslint@2.0.4',
+            '@art-ws/config-eslint@2.0.5',
+            '@art-ws/config-ts@2.0.7',
+            '@art-ws/config-ts@2.0.8',
+            '@art-ws/db-context@2.0.24',
+            '@art-ws/di-node@2.0.13',
+            '@art-ws/di@2.0.28',
+            '@art-ws/di@2.0.32',
+            '@art-ws/eslint@1.0.5',
+            '@art-ws/eslint@1.0.6',
+            '@art-ws/fastify-http-server@2.0.24',
+            '@art-ws/fastify-http-server@2.0.27',
+            '@art-ws/http-server@2.0.21',
+            '@art-ws/http-server@2.0.25',
+            '@art-ws/openapi@0.1.12',
+            '@art-ws/openapi@0.1.9',
+            '@art-ws/package-base@1.0.5',
+            '@art-ws/package-base@1.0.6',
+            '@art-ws/prettier@1.0.5',
+            '@art-ws/prettier@1.0.6',
+            '@art-ws/slf@2.0.15',
+            '@art-ws/slf@2.0.22',
+            '@art-ws/ssl-info@1.0.10',
+            '@art-ws/ssl-info@1.0.9',
+            '@art-ws/web-app@1.0.3',
+            '@art-ws/web-app@1.0.4',
+            '@crowdstrike/commitlint@8.1.1',
+            '@crowdstrike/commitlint@8.1.2',
+            '@crowdstrike/falcon-shoelace@0.4.1',
+            '@crowdstrike/falcon-shoelace@0.4.2',
+            '@crowdstrike/foundry-js@0.19.1',
+            '@crowdstrike/foundry-js@0.19.2',
+            '@crowdstrike/glide-core@0.34.2',
+            '@crowdstrike/glide-core@0.34.3',
+            '@crowdstrike/logscale-dashboard@1.205.1',
+            '@crowdstrike/logscale-dashboard@1.205.2',
+            '@crowdstrike/logscale-file-editor@1.205.1',
+            '@crowdstrike/logscale-file-editor@1.205.2',
+            '@crowdstrike/logscale-parser-edit@1.205.1',
+            '@crowdstrike/logscale-parser-edit@1.205.2',
+            '@crowdstrike/logscale-search@1.205.1',
+            '@crowdstrike/logscale-search@1.205.2',
+            '@crowdstrike/tailwind-toucan-base@5.0.1',
+            '@crowdstrike/tailwind-toucan-base@5.0.2',
+            '@ctrl/deluge@7.2.1',
+            '@ctrl/deluge@7.2.2',
+            '@ctrl/golang-template@1.4.2',
+            '@ctrl/golang-template@1.4.3',
+            '@ctrl/magnet-link@4.0.3',
+            '@ctrl/magnet-link@4.0.4',
+            '@ctrl/ngx-codemirror@7.0.1',
+            '@ctrl/ngx-codemirror@7.0.2',
+            '@ctrl/ngx-csv@6.0.1',
+            '@ctrl/ngx-csv@6.0.2',
+            '@ctrl/ngx-emoji-mart@9.2.1',
+            '@ctrl/ngx-emoji-mart@9.2.2',
+            '@ctrl/ngx-rightclick@4.0.1',
+            '@ctrl/ngx-rightclick@4.0.2',
+            '@ctrl/qbittorrent@9.7.1',
+            '@ctrl/qbittorrent@9.7.2',
+            '@ctrl/react-adsense@2.0.1',
+            '@ctrl/react-adsense@2.0.2',
+            '@ctrl/shared-torrent@6.3.1',
+            '@ctrl/shared-torrent@6.3.2',
+            '@ctrl/tinycolor@4.1.1',
+            '@ctrl/tinycolor@4.1.2',
+            '@ctrl/torrent-file@4.1.1',
+            '@ctrl/torrent-file@4.1.2',
+            '@ctrl/transmission@7.3.1',
+            '@ctrl/ts-base32@4.0.1',
+            '@ctrl/ts-base32@4.0.2',
+            '@hestjs/core@0.2.1',
+            '@hestjs/cqrs@0.1.6',
+            '@hestjs/demo@0.1.2',
+            '@hestjs/eslint-config@0.1.2',
+            '@hestjs/logger@0.1.6',
+            '@hestjs/scalar@0.1.7',
+            '@hestjs/validation@0.1.6',
+            '@nativescript-community/arraybuffers@1.1.6',
+            '@nativescript-community/arraybuffers@1.1.7',
+            '@nativescript-community/arraybuffers@1.1.8',
+            '@nativescript-community/gesturehandler@2.0.35',
+            '@nativescript-community/perms@3.0.5',
+            '@nativescript-community/perms@3.0.6',
+            '@nativescript-community/perms@3.0.7',
+            '@nativescript-community/perms@3.0.8',
+            '@nativescript-community/sentry@4.6.43',
+            '@nativescript-community/sqlite@3.5.2',
+            '@nativescript-community/sqlite@3.5.3',
+            '@nativescript-community/sqlite@3.5.4',
+            '@nativescript-community/sqlite@3.5.5',
+            '@nativescript-community/text@1.6.10',
+            '@nativescript-community/text@1.6.11',
+            '@nativescript-community/text@1.6.12',
+            '@nativescript-community/text@1.6.13',
+            '@nativescript-community/text@1.6.9',
+            '@nativescript-community/typeorm@0.2.30',
+            '@nativescript-community/typeorm@0.2.31',
+            '@nativescript-community/typeorm@0.2.32',
+            '@nativescript-community/typeorm@0.2.33',
+            '@nativescript-community/ui-collectionview@6.0.6',
+            '@nativescript-community/ui-document-picker@1.1.27',
+            '@nativescript-community/ui-document-picker@1.1.28',
+            '@nativescript-community/ui-drawer@0.1.30',
+            '@nativescript-community/ui-image@4.5.6',
+            '@nativescript-community/ui-label@1.3.35',
+            '@nativescript-community/ui-label@1.3.36',
+            '@nativescript-community/ui-label@1.3.37',
+            '@nativescript-community/ui-material-bottom-navigation@7.2.72',
+            '@nativescript-community/ui-material-bottom-navigation@7.2.73',
+            '@nativescript-community/ui-material-bottom-navigation@7.2.74',
+            '@nativescript-community/ui-material-bottom-navigation@7.2.75',
+            '@nativescript-community/ui-material-bottomsheet@7.2.72',
+            '@nativescript-community/ui-material-core-tabs@7.2.72',
+            '@nativescript-community/ui-material-core-tabs@7.2.73',
+            '@nativescript-community/ui-material-core-tabs@7.2.74',
+            '@nativescript-community/ui-material-core-tabs@7.2.75',
+            '@nativescript-community/ui-material-core-tabs@7.2.76',
+            '@nativescript-community/ui-material-core@7.2.72',
+            '@nativescript-community/ui-material-core@7.2.73',
+            '@nativescript-community/ui-material-core@7.2.74',
+            '@nativescript-community/ui-material-core@7.2.75',
+            '@nativescript-community/ui-material-core@7.2.76',
+            '@nativescript-community/ui-material-ripple@7.2.72',
+            '@nativescript-community/ui-material-ripple@7.2.73',
+            '@nativescript-community/ui-material-ripple@7.2.74',
+            '@nativescript-community/ui-material-ripple@7.2.75',
+            '@nativescript-community/ui-material-tabs@7.2.72',
+            '@nativescript-community/ui-material-tabs@7.2.73',
+            '@nativescript-community/ui-material-tabs@7.2.74',
+            '@nativescript-community/ui-material-tabs@7.2.75',
+            '@nativescript-community/ui-pager@14.1.36',
+            '@nativescript-community/ui-pager@14.1.37',
+            '@nativescript-community/ui-pager@14.1.38',
+            '@nativescript-community/ui-pulltorefresh@2.5.4',
+            '@nativescript-community/ui-pulltorefresh@2.5.5',
+            '@nativescript-community/ui-pulltorefresh@2.5.6',
+            '@nativescript-community/ui-pulltorefresh@2.5.7',
+            '@nexe/config-manager@0.1.1',
+            '@nexe/eslint-config@0.1.1',
+            '@nexe/logger@0.1.3',
+            '@nstudio/angular@20.0.4',
+            '@nstudio/angular@20.0.5',
+            '@nstudio/angular@20.0.6',
+            '@nstudio/focus@20.0.4',
+            '@nstudio/focus@20.0.5',
+            '@nstudio/focus@20.0.6',
+            '@nstudio/nativescript-checkbox@2.0.6',
+            '@nstudio/nativescript-checkbox@2.0.7',
+            '@nstudio/nativescript-checkbox@2.0.8',
+            '@nstudio/nativescript-checkbox@2.0.9',
+            '@nstudio/nativescript-loading-indicator@5.0.1',
+            '@nstudio/nativescript-loading-indicator@5.0.2',
+            '@nstudio/nativescript-loading-indicator@5.0.3',
+            '@nstudio/nativescript-loading-indicator@5.0.4',
+            '@nstudio/ui-collectionview@5.1.11',
+            '@nstudio/ui-collectionview@5.1.12',
+            '@nstudio/ui-collectionview@5.1.13',
+            '@nstudio/ui-collectionview@5.1.14',
+            '@nstudio/web-angular@20.0.4',
+            '@nstudio/web@20.0.4',
+            '@nstudio/xplat-utils@20.0.5',
+            '@nstudio/xplat-utils@20.0.6',
+            '@nstudio/xplat-utils@20.0.7',
+            '@nstudio/xplat@20.0.5',
+            '@nstudio/xplat@20.0.6',
+            '@nstudio/xplat@20.0.7',
+            '@operato/board@9.0.35',
+            '@operato/board@9.0.36',
+            '@operato/board@9.0.37',
+            '@operato/board@9.0.38',
+            '@operato/board@9.0.39',
+            '@operato/board@9.0.40',
+            '@operato/board@9.0.41',
+            '@operato/board@9.0.42',
+            '@operato/board@9.0.43',
+            '@operato/board@9.0.44',
+            '@operato/board@9.0.45',
+            '@operato/board@9.0.46',
+            '@operato/board@9.0.47',
+            '@operato/board@9.0.48',
+            '@operato/board@9.0.49',
+            '@operato/board@9.0.50',
+            '@operato/board@9.0.51',
+            '@operato/data-grist@9.0.29',
+            '@operato/data-grist@9.0.35',
+            '@operato/data-grist@9.0.36',
+            '@operato/data-grist@9.0.37',
+            '@operato/graphql@9.0.22',
+            '@operato/graphql@9.0.35',
+            '@operato/graphql@9.0.36',
+            '@operato/graphql@9.0.37',
+            '@operato/graphql@9.0.38',
+            '@operato/graphql@9.0.39',
+            '@operato/graphql@9.0.40',
+            '@operato/graphql@9.0.41',
+            '@operato/graphql@9.0.42',
+            '@operato/graphql@9.0.43',
+            '@operato/graphql@9.0.44',
+            '@operato/graphql@9.0.45',
+            '@operato/graphql@9.0.46',
+            '@operato/headroom@9.0.2',
+            '@operato/headroom@9.0.35',
+            '@operato/headroom@9.0.36',
+            '@operato/headroom@9.0.37',
+            '@operato/help@9.0.35',
+            '@operato/help@9.0.36',
+            '@operato/help@9.0.37',
+            '@operato/help@9.0.38',
+            '@operato/help@9.0.39',
+            '@operato/help@9.0.40',
+            '@operato/help@9.0.41',
+            '@operato/help@9.0.42',
+            '@operato/help@9.0.43',
+            '@operato/help@9.0.44',
+            '@operato/help@9.0.45',
+            '@operato/help@9.0.46',
+            '@operato/i18n@9.0.35',
+            '@operato/i18n@9.0.36',
+            '@operato/i18n@9.0.37',
+            '@operato/input@9.0.27',
+            '@operato/input@9.0.35',
+            '@operato/input@9.0.36',
+            '@operato/input@9.0.37',
+            '@operato/input@9.0.38',
+            '@operato/input@9.0.39',
+            '@operato/input@9.0.40',
+            '@operato/input@9.0.41',
+            '@operato/input@9.0.42',
+            '@operato/input@9.0.43',
+            '@operato/input@9.0.44',
+            '@operato/input@9.0.45',
+            '@operato/input@9.0.46',
+            '@operato/input@9.0.47',
+            '@operato/input@9.0.48',
+            '@operato/layout@9.0.35',
+            '@operato/layout@9.0.36',
+            '@operato/layout@9.0.37',
+            '@operato/popup@9.0.22',
+            '@operato/popup@9.0.35',
+            '@operato/popup@9.0.36',
+            '@operato/popup@9.0.37',
+            '@operato/popup@9.0.38',
+            '@operato/popup@9.0.39',
+            '@operato/popup@9.0.40',
+            '@operato/popup@9.0.41',
+            '@operato/popup@9.0.42',
+            '@operato/popup@9.0.43',
+            '@operato/popup@9.0.44',
+            '@operato/popup@9.0.45',
+            '@operato/popup@9.0.46',
+            '@operato/popup@9.0.49',
+            '@operato/pull-to-refresh@9.0.36',
+            '@operato/pull-to-refresh@9.0.37',
+            '@operato/pull-to-refresh@9.0.38',
+            '@operato/pull-to-refresh@9.0.39',
+            '@operato/pull-to-refresh@9.0.40',
+            '@operato/pull-to-refresh@9.0.41',
+            '@operato/pull-to-refresh@9.0.42',
+            '@operato/shell@9.0.22',
+            '@operato/shell@9.0.35',
+            '@operato/shell@9.0.36',
+            '@operato/shell@9.0.37',
+            '@operato/shell@9.0.38',
+            '@operato/shell@9.0.39',
+            '@operato/styles@9.0.2',
+            '@operato/styles@9.0.35',
+            '@operato/styles@9.0.36',
+            '@operato/styles@9.0.37',
+            '@operato/utils@9.0.22',
+            '@operato/utils@9.0.35',
+            '@operato/utils@9.0.36',
+            '@operato/utils@9.0.37',
+            '@operato/utils@9.0.38',
+            '@operato/utils@9.0.39',
+            '@operato/utils@9.0.40',
+            '@operato/utils@9.0.41',
+            '@operato/utils@9.0.42',
+            '@operato/utils@9.0.43',
+            '@operato/utils@9.0.44',
+            '@operato/utils@9.0.45',
+            '@operato/utils@9.0.46',
+            '@operato/utils@9.0.47',
+            '@operato/utils@9.0.49',
+            '@operato/utils@9.0.50',
+            '@operato/utils@9.0.51',
+            '@teselagen/bio-parsers@0.4.30',
+            '@teselagen/bounce-loader@0.3.16',
+            '@teselagen/bounce-loader@0.3.17',
+            '@teselagen/file-utils@0.3.22',
+            '@teselagen/liquibase-tools@0.4.1',
+            '@teselagen/ove@0.7.40',
+            '@teselagen/range-utils@0.3.14',
+            '@teselagen/range-utils@0.3.15',
+            '@teselagen/react-list@0.8.19',
+            '@teselagen/react-list@0.8.20',
+            '@teselagen/react-table@6.10.19',
+            '@teselagen/react-table@6.10.20',
+            '@teselagen/react-table@6.10.22',
+            '@teselagen/sequence-utils@0.3.34',
+            '@teselagen/ui@0.9.10',
+            '@thangved/callback-window@1.1.4',
+            '@things-factory/attachment-base@9.0.42',
+            '@things-factory/attachment-base@9.0.43',
+            '@things-factory/attachment-base@9.0.44',
+            '@things-factory/attachment-base@9.0.45',
+            '@things-factory/attachment-base@9.0.46',
+            '@things-factory/attachment-base@9.0.47',
+            '@things-factory/attachment-base@9.0.48',
+            '@things-factory/attachment-base@9.0.49',
+            '@things-factory/attachment-base@9.0.50',
+            '@things-factory/attachment-base@9.0.51',
+            '@things-factory/attachment-base@9.0.52',
+            '@things-factory/attachment-base@9.0.53',
+            '@things-factory/attachment-base@9.0.54',
+            '@things-factory/attachment-base@9.0.55',
+            '@things-factory/auth-base@9.0.42',
+            '@things-factory/auth-base@9.0.43',
+            '@things-factory/auth-base@9.0.44',
+            '@things-factory/auth-base@9.0.45',
+            '@things-factory/email-base@9.0.42',
+            '@things-factory/email-base@9.0.43',
+            '@things-factory/email-base@9.0.44',
+            '@things-factory/email-base@9.0.45',
+            '@things-factory/email-base@9.0.46',
+            '@things-factory/email-base@9.0.47',
+            '@things-factory/email-base@9.0.48',
+            '@things-factory/email-base@9.0.49',
+            '@things-factory/email-base@9.0.50',
+            '@things-factory/email-base@9.0.51',
+            '@things-factory/email-base@9.0.52',
+            '@things-factory/email-base@9.0.53',
+            '@things-factory/email-base@9.0.54',
+            '@things-factory/email-base@9.0.55',
+            '@things-factory/email-base@9.0.56',
+            '@things-factory/email-base@9.0.57',
+            '@things-factory/email-base@9.0.58',
+            '@things-factory/email-base@9.0.59',
+            '@things-factory/env@9.0.42',
+            '@things-factory/env@9.0.43',
+            '@things-factory/env@9.0.44',
+            '@things-factory/env@9.0.45',
+            '@things-factory/integration-base@9.0.42',
+            '@things-factory/integration-base@9.0.43',
+            '@things-factory/integration-base@9.0.44',
+            '@things-factory/integration-base@9.0.45',
+            '@things-factory/integration-marketplace@9.0.43',
+            '@things-factory/integration-marketplace@9.0.44',
+            '@things-factory/integration-marketplace@9.0.45',
+            '@things-factory/shell@9.0.42',
+            '@things-factory/shell@9.0.43',
+            '@things-factory/shell@9.0.44',
+            '@things-factory/shell@9.0.45',
+            '@tnf-dev/api@1.0.8',
+            '@tnf-dev/core@1.0.8',
+            '@tnf-dev/js@1.0.8',
+            '@tnf-dev/mui@1.0.8',
+            '@tnf-dev/react@1.0.8',
+            '@ui-ux-gang/devextreme-angular-rpk@24.1.7',
+            '@yoobic/design-system@6.5.17',
+            '@yoobic/jpeg-camera-es6@1.0.13',
+            '@yoobic/yobi@8.7.53',
+            'airchief@0.3.1',
+            'airpilot@0.8.8',
+            'angulartics2@14.1.1',
+            'angulartics2@14.1.2',
+            'browser-webdriver-downloader@3.0.8',
+            'capacitor-notificationhandler@0.0.2',
+            'capacitor-notificationhandler@0.0.3',
+            'capacitor-plugin-healthapp@0.0.2',
+            'capacitor-plugin-healthapp@0.0.3',
+            'capacitor-plugin-ihealth@1.1.8',
+            'capacitor-plugin-ihealth@1.1.9',
+            'capacitor-plugin-vonage@1.0.2',
+            'capacitor-plugin-vonage@1.0.3',
+            'capacitorandroidpermissions@0.0.4',
+            'capacitorandroidpermissions@0.0.5',
+            'config-cordova@0.8.5',
+            'cordova-plugin-voxeet2@1.0.24',
+            'cordova-voxeet@1.0.32',
+            'create-hest-app@0.1.9',
+            'db-evo@1.1.4',
+            'db-evo@1.1.5',
+            'devextreme-angular-rpk@21.2.8',
+            'ember-browser-services@5.0.2',
+            'ember-browser-services@5.0.3',
+            'ember-headless-form-yup@1.0.1',
+            'ember-headless-form@1.1.2',
+            'ember-headless-form@1.1.3',
+            'ember-headless-table@2.1.5',
+            'ember-headless-table@2.1.6',
+            'ember-url-hash-polyfill@1.0.12',
+            'ember-url-hash-polyfill@1.0.13',
+            'ember-velcro@2.2.1',
+            'ember-velcro@2.2.2',
+            'encounter-playground@0.0.2',
+            'encounter-playground@0.0.3',
+            'encounter-playground@0.0.4',
+            'encounter-playground@0.0.5',
+            'eslint-config-crowdstrike-node@4.0.3',
+            'eslint-config-crowdstrike-node@4.0.4',
+            'eslint-config-crowdstrike@11.0.2',
+            'eslint-config-crowdstrike@11.0.3',
+            'eslint-config-teselagen@6.1.7',
+            'eslint-config-teselagen@6.1.8',
+            'globalize-rpk@1.7.4',
+            'graphql-sequelize-teselagen@5.3.8',
+            'graphql-sequelize-teselagen@5.3.9',
+            'html-to-base64-image@1.0.2',
+            'json-rules-engine-simplified@0.2.1',
+            'json-rules-engine-simplified@0.2.4',
+            'jumpgate@0.0.2',
+            'koa2-swagger-ui@5.11.1',
+            'koa2-swagger-ui@5.11.2',
+            'mcfly-semantic-release@1.3.1',
+            'mcp-knowledge-base@0.0.2',
+            'mcp-knowledge-graph@1.2.1',
+            'mobioffice-cli@1.0.3',
+            'monorepo-next@13.0.1',
+            'monorepo-next@13.0.2',
+            'mstate-angular@0.4.4',
+            'mstate-cli@0.4.7',
+            'mstate-dev-react@1.1.1',
+            'mstate-react@1.6.5',
+            'ng2-file-upload@7.0.2',
+            'ng2-file-upload@7.0.3',
+            'ng2-file-upload@8.0.1',
+            'ng2-file-upload@8.0.2',
+            'ng2-file-upload@8.0.3',
+            'ng2-file-upload@9.0.1',
+            'ngx-bootstrap@18.1.4',
+            'ngx-bootstrap@19.0.3',
+            'ngx-bootstrap@19.0.4',
+            'ngx-bootstrap@20.0.3',
+            'ngx-bootstrap@20.0.4',
+            'ngx-bootstrap@20.0.5',
+            'ngx-color@10.0.1',
+            'ngx-color@10.0.2',
+            'ngx-toastr@19.0.1',
+            'ngx-toastr@19.0.2',
+            'ngx-trend@8.0.1',
+            'ngx-ws@1.1.5',
+            'ngx-ws@1.1.6',
+            'oradm-to-gql@35.0.14',
+            'oradm-to-gql@35.0.15',
+            'oradm-to-sqlz@1.1.2',
+            'ove-auto-annotate@0.0.10',
+            'ove-auto-annotate@0.0.9',
+            'pm2-gelf-json@1.0.4',
+            'pm2-gelf-json@1.0.5',
+            'printjs-rpk@1.6.1',
+            'react-complaint-image@0.0.32',
+            'react-complaint-image@0.0.35',
+            'react-jsonschema-form-conditionals@0.3.18',
+            'react-jsonschema-form-conditionals@0.3.21',
+            'react-jsonschema-form-extras@1.0.4',
+            'react-jsonschema-rxnt-extras@0.4.9',
+            'remark-preset-lint-crowdstrike@4.0.1',
+            'remark-preset-lint-crowdstrike@4.0.2',
+            'rxnt-authentication@0.0.3',
+            'rxnt-authentication@0.0.4',
+            'rxnt-authentication@0.0.5',
+            'rxnt-authentication@0.0.6',
+            'rxnt-healthchecks-nestjs@1.0.2',
+            'rxnt-healthchecks-nestjs@1.0.3',
+            'rxnt-healthchecks-nestjs@1.0.4',
+            'rxnt-healthchecks-nestjs@1.0.5',
+            'rxnt-kue@1.0.4',
+            'rxnt-kue@1.0.5',
+            'rxnt-kue@1.0.6',
+            'rxnt-kue@1.0.7',
+            'swc-plugin-component-annotate@1.9.1',
+            'swc-plugin-component-annotate@1.9.2',
+            'tbssnch@1.0.2',
+            'teselagen-interval-tree@1.1.2',
+            'tg-client-query-builder@2.14.4',
+            'tg-client-query-builder@2.14.5',
+            'tg-redbird@1.3.1',
+            'tg-redbird@1.3.2',
+            'tg-seq-gen@1.0.10',
+            'tg-seq-gen@1.0.9',
+            'thangved-react-grid@1.0.3',
+            'ts-gaussian@3.0.5',
+            'ts-gaussian@3.0.6',
+            'ts-imports@1.0.1',
+            'ts-imports@1.0.2',
+            'tvi-cli@0.1.5',
+            've-bamreader@0.2.6',
+            've-bamreader@0.2.7',
+            've-editor@1.0.1',
+            've-editor@1.0.2',
+            'verror-extra@6.0.1',
+            'voip-callkit@1.0.2',
+            'voip-callkit@1.0.3',
+            'wdio-web-reporter@0.1.3',
+            'yargs-help-output@5.0.3',
+            'yoo-styles@6.0.326'
+        ];
+
+        // Vytvorenie mapy pre rýchlejšie vyhľadávanie
+        const suspiciousPackagesSet = new Set(suspiciousPackages);
+        
+        // Vytvorenie mapy balíčkov bez verzií pre flexibilnejšie vyhľadávanie
+        const suspiciousPackageNames = new Set(suspiciousPackages.map(pkg => pkg.split('@').slice(0, -1).join('@')));
+
+        // Debug log
+        let debugLog = [];
+        
+        function addDebugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.push(`[${timestamp}] ${message}`);
+            updateDebugOutput();
+        }
+        
+        function updateDebugOutput() {
+            const debugOutput = document.getElementById('debugOutput');
+            if (debugOutput) {
+                debugOutput.value = debugLog.join('\n');
+                debugOutput.scrollTop = debugOutput.scrollHeight;
+            }
+        }
+        
+        function clearDebug() {
+            debugLog = [];
+            updateDebugOutput();
+        }
+        
+        function toggleDebug() {
+            const debugSection = document.getElementById('debugSection');
+            if (debugSection.style.display === 'none') {
+                debugSection.style.display = 'block';
+            } else {
+                debugSection.style.display = 'none';
+            }
+        }
+        
+        function toggleSuspiciousList() {
+            const listSection = document.getElementById('suspiciousList');
+            const listContent = document.getElementById('suspiciousListContent');
+            
+            if (listSection.style.display === 'none') {
+                listContent.value = suspiciousPackages.join('\n');
+                listSection.style.display = 'block';
+            } else {
+                listSection.style.display = 'none';
+            }
+        }
+        
+        function copySuspiciousList() {
+            const listContent = document.getElementById('suspiciousListContent');
+            listContent.value = suspiciousPackages.join('\n');
+            listContent.select();
+            listContent.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(listContent.value).then(() => {
+                alert('Zoznam bol skopírovaný do schránky!');
+            }).catch(() => {
+                // Fallback pre staršie prehliadače
+                document.execCommand('copy');
+                alert('Zoznam bol skopírovaný do schránky!');
+            });
+        }
+
+        // File input event listener
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            let combinedContent = '';
+            
+            if (files.length > 0) {
+                addDebugLog(`📁 Nahrávam ${files.length} súborov...`);
+                let filesProcessed = 0;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    addDebugLog(`📄 Čítam súbor: ${file.name} (${file.size} bytes)`);
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(event) {
+                        combinedContent += `\n/* ${file.name} */\n` + event.target.result;
+                        filesProcessed++;
+                        addDebugLog(`✅ Súbor ${file.name} úspešne načítaný`);
+                        
+                        if (filesProcessed === files.length) {
+                            document.getElementById('jsonContent').value = combinedContent;
+                            addDebugLog(`🏁 Všetkých ${files.length} súborov načítaných`);
+                        }
+                    };
+                    
+                    reader.onerror = function() {
+                        addDebugLog(`❌ Chyba pri čítaní súboru: ${file.name}`);
+                    };
+                    
+                    reader.readAsText(file);
+                }
+            }
+        });
+
+        function clearAll() {
+            document.getElementById('jsonContent').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('results').innerHTML = '';
+            debugLog = [];
+            updateDebugOutput();
+        }
+
+        function extractPackageWithVersion(packageName, version) {
+            if (typeof version === 'string') {
+                // Odstránenie prefix znakov ako ^, ~, >=, atď.
+                const cleanVersion = version.replace(/^[\^~>=<\s]+/, '');
+                return `${packageName}@${cleanVersion}`;
+            }
+            return packageName;
+        }
+
+        function checkDependencies(deps, section, fileName) {
+            const found = [];
+            addDebugLog(`🔍 Kontrolujem ${section} v súbore ${fileName}`);
+            
+            if (deps && typeof deps === 'object') {
+                const packageCount = Object.keys(deps).length;
+                addDebugLog(`📦 Nájdených ${packageCount} balíčkov v sekcii ${section}`);
+                
+                for (const [packageName, version] of Object.entries(deps)) {
+                    const fullPackageName = extractPackageWithVersion(packageName, version);
+                    addDebugLog(`  ⚙️ Kontrolujem: ${packageName} -> ${fullPackageName}`);
+                    
+                    // Kontrola presnej zhody s verziou
+                    if (suspiciousPackagesSet.has(fullPackageName)) {
+                        addDebugLog(`  🚨 PRESNÁ ZHODA: ${fullPackageName}`);
+                        found.push({
+                            package: fullPackageName,
+                            section: section,
+                            fileName: fileName,
+                            matchType: 'exact'
+                        });
+                    }
+                    // Kontrola bez verzie
+                    else if (suspiciousPackageNames.has(packageName)) {
+                        addDebugLog(`  ⚠️ ZHODA NÁZVU: ${packageName} (verzia: ${version})`);
+                        found.push({
+                            package: packageName,
+                            section: section,
+                            fileName: fileName,
+                            matchType: 'name',
+                            installedVersion: version
+                        });
+                    } else {
+                        addDebugLog(`  ✅ OK: ${packageName}`);
+                    }
+                }
+                
+                addDebugLog(`📊 V sekcii ${section} nájdených ${found.length} podozrivých balíčkov`);
+            } else {
+                addDebugLog(`⚠️ Sekcia ${section} je prázdna alebo neexistuje`);
+            }
+            
+            return found;
+        }
+
+        function checkPackageLock(lockData, fileName) {
+            const found = [];
+            addDebugLog(`🔐 Kontrolujem package-lock.json súbor: ${fileName}`);
+            
+            // Kontrola hlavných dependencies v package-lock.json
+            if (lockData.dependencies) {
+                const depCount = Object.keys(lockData.dependencies).length;
+                addDebugLog(`📦 Nájdených ${depCount} balíčkov v dependencies (lock format)`);
+                
+                for (const [packageName, packageInfo] of Object.entries(lockData.dependencies)) {
+                    if (packageInfo.version) {
+                        const fullPackageName = `${packageName}@${packageInfo.version}`;
+                        addDebugLog(`  ⚙️ Kontrolujem lock: ${packageName} -> ${fullPackageName}`);
+                        
+                        if (suspiciousPackagesSet.has(fullPackageName)) {
+                            addDebugLog(`  🚨 PRESNÁ ZHODA (lock): ${fullPackageName}`);
+                            found.push({
+                                package: fullPackageName,
+                                section: 'dependencies (lock)',
+                                fileName: fileName,
+                                matchType: 'exact'
+                            });
+                        }
+                        else if (suspiciousPackageNames.has(packageName)) {
+                            addDebugLog(`  ⚠️ ZHODA NÁZVU (lock): ${packageName} (verzia: ${packageInfo.version})`);
+                            found.push({
+                                package: packageName,
+                                section: 'dependencies (lock)',
+                                fileName: fileName,
+                                matchType: 'name',
+                                installedVersion: packageInfo.version
+                            });
+                        } else {
+                            addDebugLog(`  ✅ OK (lock): ${packageName}`);
+                        }
+                    }
+                }
+            }
+            
+            // Kontrola packages v novšom formáte package-lock.json
+            if (lockData.packages) {
+                const packagesCount = Object.keys(lockData.packages).length - 1; // -1 for root
+                addDebugLog(`📦 Nájdených ${packagesCount} balíčkov v packages (new lock format)`);
+                
+                for (const [packagePath, packageInfo] of Object.entries(lockData.packages)) {
+                    if (packagePath !== '' && packageInfo.version) { // Skip root package
+                        const packageName = packagePath.replace('node_modules/', '');
+                        const fullPackageName = `${packageName}@${packageInfo.version}`;
+                        addDebugLog(`  ⚙️ Kontrolujem packages: ${packageName} -> ${fullPackageName}`);
+                        
+                        if (suspiciousPackagesSet.has(fullPackageName)) {
+                            addDebugLog(`  🚨 PRESNÁ ZHODA (packages): ${fullPackageName}`);
+                            found.push({
+                                package: fullPackageName,
+                                section: 'packages (lock)',
+                                fileName: fileName,
+                                matchType: 'exact'
+                            });
+                        }
+                        else if (suspiciousPackageNames.has(packageName)) {
+                            addDebugLog(`  ⚠️ ZHODA NÁZVU (packages): ${packageName} (verzia: ${packageInfo.version})`);
+                            found.push({
+                                package: packageName,
+                                section: 'packages (lock)',
+                                fileName: fileName,
+                                matchType: 'name',
+                                installedVersion: packageInfo.version
+                            });
+                        } else {
+                            addDebugLog(`  ✅ OK (packages): ${packageName}`);
+                        }
+                    }
+                }
+            }
+            
+            addDebugLog(`📊 V lock súbore nájdených ${found.length} podozrivých balíčkov`);
+            return found;
+        }
+
+        function checkPackages() {
+            const content = document.getElementById('jsonContent').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            // Vymazanie predchádzajúceho debug logu
+            debugLog = [];
+            addDebugLog('🚀 Spúšťam kontrolu balíčkov...');
+            addDebugLog(`📋 Mám ${suspiciousPackages.length} podozrivých balíčkov na kontrolu`);
+            
+            if (!content) {
+                resultsDiv.innerHTML = '<div class="error">❌ Vložte obsah súboru alebo nahrajte súbor.</div>';
+                addDebugLog('❌ Žiadny obsah na kontrolu');
+                return;
+            }
+
+            let allSuspicious = [];
+            let totalPackages = 0;
+            let filesChecked = 0;
+
+            addDebugLog('📄 Rozdeľujem obsah na jednotlivé súbory...');
+            
+            // Rozdelenie obsahu na jednotlivé súbory (ak sú viacnásobné)
+            const fileSections = content.split(/\/\* .+? \*\//);
+            const fileNames = content.match(/\/\* (.+?) \*\//g) || ['Manual Input'];
+            
+            addDebugLog(`📁 Nájdených ${fileSections.filter(s => s.trim()).length} súborov na kontrolu`);
+
+            fileSections.forEach((section, index) => {
+                const trimmedSection = section.trim();
+                if (!trimmedSection) return;
+
+                const fileName = fileNames[index] ? fileNames[index].replace(/\/\* (.+?) \*\//, '$1') : 'Manual Input';
+                filesChecked++;
+                
+                addDebugLog(`\n📂 === KONTROLA SÚBORU ${filesChecked}: ${fileName} ===`);
+
+                try {
+                    const jsonData = JSON.parse(trimmedSection);
+                    addDebugLog('✅ JSON úspešne parsovaný');
+                    
+                    // Kontrola package.json formátu
+                    if (jsonData.dependencies || jsonData.devDependencies || jsonData.peerDependencies || jsonData.optionalDependencies) {
+                        addDebugLog('📦 Detekovaný package.json formát');
+                        
+                        const deps = checkDependencies(jsonData.dependencies, 'dependencies', fileName);
+                        const devDeps = checkDependencies(jsonData.devDependencies, 'devDependencies', fileName);
+                        const peerDeps = checkDependencies(jsonData.peerDependencies, 'peerDependencies', fileName);
+                        const optDeps = checkDependencies(jsonData.optionalDependencies, 'optionalDependencies', fileName);
+                        
+                        allSuspicious = allSuspicious.concat(deps, devDeps, peerDeps, optDeps);
+                        
+                        totalPackages += Object.keys(jsonData.dependencies || {}).length;
+                        totalPackages += Object.keys(jsonData.devDependencies || {}).length;
+                        totalPackages += Object.keys(jsonData.peerDependencies || {}).length;
+                        totalPackages += Object.keys(jsonData.optionalDependencies || {}).length;
+                    }
+                    
+                    // Kontrola package-lock.json formátu
+                    if (jsonData.lockfileVersion || jsonData.packages || (jsonData.dependencies && Object.values(jsonData.dependencies)[0]?.version)) {
+                        addDebugLog('🔐 Detekovaný package-lock.json formát');
+                        
+                        const lockSuspicious = checkPackageLock(jsonData, fileName);
+                        allSuspicious = allSuspicious.concat(lockSuspicious);
+                        
+                        if (jsonData.dependencies) {
+                            totalPackages += Object.keys(jsonData.dependencies).length;
+                        }
+                        if (jsonData.packages) {
+                            totalPackages += Object.keys(jsonData.packages).length - 1; // -1 for root package
+                        }
+                    }
+                    
+                    addDebugLog(`📂 Súbor ${fileName} dokončený`);
+                    
+                } catch (error) {
+                    addDebugLog(`❌ CHYBA pri parsovaní ${fileName}: ${error.message}`);
+                    resultsDiv.innerHTML += `<div class="error">❌ Chyba pri parsovaní JSON súboru ${fileName}: ${error.message}</div>`;
+                    return;
+                }
+            });
+
+            addDebugLog(`\n🏁 === FINÁLNE VÝSLEDKY ===`);
+            addDebugLog(`📁 Kontrolovaných súborov: ${filesChecked}`);
+            addDebugLog(`📦 Celkovo balíčkov: ${totalPackages}`);
+            addDebugLog(`🚨 Podozrivých balíčkov: ${allSuspicious.length}`);
+
+            // Zobrazenie výsledkov
+            let html = '';
+            
+            // Štatistiky
+            html += `<div class="stats">
+                <h3>📊 Štatistiky kontroly</h3>
+                <p><strong>Kontrolované súbory:</strong> ${filesChecked}</p>
+                <p><strong>Celkový počet balíčkov:</strong> ${totalPackages}</p>
+                <p><strong>Nájdené podozrivé balíčky:</strong> ${allSuspicious.length}</p>
+            </div>`;
+
+            if (allSuspicious.length === 0) {
+                addDebugLog('✅ Kontrola dokončená - žiadne podozrivé balíčky');
+                html += '<div class="success">✅ <strong>Výborné!</strong> Nenašli sa žiadne podozrivé balíčky zo známych bezpečnostných hrozieb.</div>';
+            } else {
+                addDebugLog('⚠️ Kontrola dokončená - nájdené podozrivé balíčky!');
+                html += `<div class="error">⚠️ <strong>VAROVANIE!</strong> Nájdené ${allSuspicious.length} podozrivé balíčky:</div>`;
+                
+                // Grupovanie podľa súborov
+                const groupedBySuspicious = {};
+                allSuspicious.forEach(item => {
+                    const key = item.package;
+                    if (!groupedBySuspicious[key]) {
+                        groupedBySuspicious[key] = [];
+                    }
+                    groupedBySuspicious[key].push(item);
+                });
+
+                Object.keys(groupedBySuspicious).sort().forEach(packageName => {
+                    const items = groupedBySuspicious[packageName];
+                    html += `<div class="suspicious-package">
+                        <strong>🚨 ${packageName}</strong>
+                        <div class="package-info">`;
+                    
+                    items.forEach(item => {
+                        const matchInfo = item.matchType === 'exact' ? 
+                            'Presná zhoda (názov + verzia)' : 
+                            `Zhoda názvu (nájdená verzia: ${item.installedVersion})`;
+                        
+                        html += `<div>📁 <strong>Súbor:</strong> ${item.fileName} | <strong>Sekcia:</strong> ${item.section} | <strong>Typ:</strong> ${matchInfo}</div>`;
+                    });
+                    
+                    html += `</div></div>`;
+                });
+
+                html += `<div class="warning">
+                    <h4>🛡️ Odporúčania:</h4>
+                    <ul>
+                        <li>Okamžite odstráňte tieto podozrivé balíčky z vašich projektov</li>
+                        <li>Skontrolujte všetky súbory v projekte na možné škodlivé zmeny</li>
+                        <li>Aktualizujte package.json a package-lock.json súbory</li>
+                        <li>Spustite <code>npm audit</code> pre ďalšie bezpečnostné kontroly</li>
+                        <li>Kontaktujte váš bezpečnostný tím</li>
+                    </ul>
+                </div>`;
+            }
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+            
+            addDebugLog('🏁 Kontrola úplne dokončená');
+        }
+    </script>
+</body>
+</html>
