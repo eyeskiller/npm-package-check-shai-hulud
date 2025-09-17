@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -149,35 +149,39 @@
     <div class="container">
         <h1>🔍 Package.json Security Checker</h1>
         <p style="text-align: center; color: #666; margin-bottom: 30px;">
-            Kontrola podozrivých balíčkov v package.json a package-lock.json súboroch
+            Check for suspicious packages in package.json and package-lock.json files
         </p>
         
+        <div style="text-align: center; margin-bottom: 20px;">
+            <p style="color: #666; font-size: 14px;">🔗 <a href="https://github.com/eyeskiller/npm-package-check-shai-hulud" target="_blank" style="color: #1976d2; text-decoration: none;">GitHub Repository</a></p>
+        </div>
+        
         <div class="upload-section">
-            <h3>📁 Nahrať súbor alebo vložiť obsah</h3>
+            <h3>📁 Upload File or Paste Content</h3>
             
             <div>
-                <label for="fileInput"><strong>Nahrať súbor:</strong></label>
+                <label for="fileInput"><strong>Upload File:</strong></label>
                 <input type="file" id="fileInput" class="file-input" accept=".json" multiple>
             </div>
             
             <div style="margin-top: 20px;">
-                <label for="jsonContent"><strong>Alebo vložte JSON obsah manuálne:</strong></label>
-                <textarea id="jsonContent" class="json-input" placeholder='Vložte obsah package.json alebo package-lock.json súboru...'></textarea>
+                <label for="jsonContent"><strong>Or paste JSON content manually:</strong></label>
+                <textarea id="jsonContent" class="json-input" placeholder='Paste the content of package.json or package-lock.json file...'></textarea>
             </div>
             
             <div style="text-align: center; margin-top: 20px;">
-                <button class="button" onclick="checkPackages()">🔍 Skontrolovať balíčky</button>
-                <button class="button clear-btn" onclick="clearAll()">🗑️ Vymazať</button>
+                <button class="button" onclick="checkPackages()">🔍 Check Packages</button>
+                <button class="button clear-btn" onclick="clearAll()">🗑️ Clear</button>
             </div>
         </div>
         
         <div id="results" class="results"></div>
         
         <div class="upload-section" style="margin-top: 30px;">
-            <h3>📋 Zoznam všetkých podozrivých balíčkov</h3>
+            <h3>📋 List of All Suspicious Packages</h3>
             <div style="text-align: center; margin-bottom: 15px;">
-                <button class="button" onclick="toggleSuspiciousList()">📋 Zobraziť/Skryť zoznam (527 balíčkov)</button>
-                <button class="button" onclick="copySuspiciousList()">📋 Kopírovať do schránky</button>
+                <button class="button" onclick="toggleSuspiciousList()">📋 Show/Hide List (527 packages)</button>
+                <button class="button" onclick="copySuspiciousList()">📋 Copy to Clipboard</button>
             </div>
             <div id="suspiciousList" style="display: none;">
                 <textarea id="suspiciousListContent" class="json-input" style="height: 200px;" readonly></textarea>
@@ -185,10 +189,10 @@
         </div>
         
         <div class="upload-section" style="margin-top: 30px;">
-            <h3>🔧 Debug výstup</h3>
+            <h3>🔧 Debug Output</h3>
             <div style="text-align: center; margin-bottom: 15px;">
-                <button class="button" onclick="toggleDebug()">🔧 Zobraziť/Skryť debug log</button>
-                <button class="button clear-btn" onclick="clearDebug()">🗑️ Vymazať log</button>
+                <button class="button" onclick="toggleDebug()">🔧 Show/Hide Debug Log</button>
+                <button class="button clear-btn" onclick="clearDebug()">🗑️ Clear Log</button>
             </div>
             <div id="debugSection" style="display: none;">
                 <textarea id="debugOutput" class="json-input" style="height: 250px; font-size: 11px;" readonly></textarea>
@@ -197,7 +201,7 @@
     </div>
 
     <script>
-        // Zoznam podozrivých balíčkov
+        // List of suspicious packages
         const suspiciousPackages = [
             '@ahmedhfarag/ngx-perfect-scrollbar@20.0.20',
             '@ahmedhfarag/ngx-virtual-scroller@4.0.4',
@@ -701,10 +705,10 @@
             'yoo-styles@6.0.326'
         ];
 
-        // Vytvorenie mapy pre rýchlejšie vyhľadávanie
+        // Create map for faster lookup
         const suspiciousPackagesSet = new Set(suspiciousPackages);
         
-        // Vytvorenie mapy balíčkov bez verzií pre flexibilnejšie vyhľadávanie
+        // Create map of packages without versions for more flexible searching
         const suspiciousPackageNames = new Set(suspiciousPackages.map(pkg => pkg.split('@').slice(0, -1).join('@')));
 
         // Debug log
@@ -756,11 +760,11 @@
             listContent.select();
             listContent.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(listContent.value).then(() => {
-                alert('Zoznam bol skopírovaný do schránky!');
+                alert('List has been copied to clipboard!');
             }).catch(() => {
-                // Fallback pre staršie prehliadače
+                // Fallback for older browsers
                 document.execCommand('copy');
-                alert('Zoznam bol skopírovaný do schránky!');
+                alert('List has been copied to clipboard!');
             });
         }
 
@@ -770,27 +774,27 @@
             let combinedContent = '';
             
             if (files.length > 0) {
-                addDebugLog(`📁 Nahrávam ${files.length} súborov...`);
+                addDebugLog(`📁 Uploading ${files.length} files...`);
                 let filesProcessed = 0;
                 
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
-                    addDebugLog(`📄 Čítam súbor: ${file.name} (${file.size} bytes)`);
+                    addDebugLog(`📄 Reading file: ${file.name} (${file.size} bytes)`);
                     const reader = new FileReader();
                     
                     reader.onload = function(event) {
                         combinedContent += `\n/* ${file.name} */\n` + event.target.result;
                         filesProcessed++;
-                        addDebugLog(`✅ Súbor ${file.name} úspešne načítaný`);
+                        addDebugLog(`✅ File ${file.name} successfully loaded`);
                         
                         if (filesProcessed === files.length) {
                             document.getElementById('jsonContent').value = combinedContent;
-                            addDebugLog(`🏁 Všetkých ${files.length} súborov načítaných`);
+                            addDebugLog(`🏁 All ${files.length} files loaded`);
                         }
                     };
                     
                     reader.onerror = function() {
-                        addDebugLog(`❌ Chyba pri čítaní súboru: ${file.name}`);
+                        addDebugLog(`❌ Error reading file: ${file.name}`);
                     };
                     
                     reader.readAsText(file);
@@ -808,7 +812,7 @@
 
         function extractPackageWithVersion(packageName, version) {
             if (typeof version === 'string') {
-                // Odstránenie prefix znakov ako ^, ~, >=, atď.
+                // Remove prefix characters like ^, ~, >=, etc.
                 const cleanVersion = version.replace(/^[\^~>=<\s]+/, '');
                 return `${packageName}@${cleanVersion}`;
             }
@@ -817,19 +821,19 @@
 
         function checkDependencies(deps, section, fileName) {
             const found = [];
-            addDebugLog(`🔍 Kontrolujem ${section} v súbore ${fileName}`);
+            addDebugLog(`🔍 Checking ${section} in file ${fileName}`);
             
             if (deps && typeof deps === 'object') {
                 const packageCount = Object.keys(deps).length;
-                addDebugLog(`📦 Nájdených ${packageCount} balíčkov v sekcii ${section}`);
+                addDebugLog(`📦 Found ${packageCount} packages in section ${section}`);
                 
                 for (const [packageName, version] of Object.entries(deps)) {
                     const fullPackageName = extractPackageWithVersion(packageName, version);
-                    addDebugLog(`  ⚙️ Kontrolujem: ${packageName} -> ${fullPackageName}`);
+                    addDebugLog(`  ⚙️ Checking: ${packageName} -> ${fullPackageName}`);
                     
-                    // Kontrola presnej zhody s verziou
+                    // Check for exact match with version
                     if (suspiciousPackagesSet.has(fullPackageName)) {
-                        addDebugLog(`  🚨 PRESNÁ ZHODA: ${fullPackageName}`);
+                        addDebugLog(`  🚨 EXACT MATCH: ${fullPackageName}`);
                         found.push({
                             package: fullPackageName,
                             section: section,
@@ -837,9 +841,9 @@
                             matchType: 'exact'
                         });
                     }
-                    // Kontrola bez verzie
+                    // Check without version
                     else if (suspiciousPackageNames.has(packageName)) {
-                        addDebugLog(`  ⚠️ ZHODA NÁZVU: ${packageName} (verzia: ${version})`);
+                        addDebugLog(`  ⚠️ NAME MATCH: ${packageName} (version: ${version})`);
                         found.push({
                             package: packageName,
                             section: section,
@@ -852,9 +856,9 @@
                     }
                 }
                 
-                addDebugLog(`📊 V sekcii ${section} nájdených ${found.length} podozrivých balíčkov`);
+                addDebugLog(`📊 Found ${found.length} suspicious packages in section ${section}`);
             } else {
-                addDebugLog(`⚠️ Sekcia ${section} je prázdna alebo neexistuje`);
+                addDebugLog(`⚠️ Section ${section} is empty or does not exist`);
             }
             
             return found;
@@ -862,20 +866,20 @@
 
         function checkPackageLock(lockData, fileName) {
             const found = [];
-            addDebugLog(`🔐 Kontrolujem package-lock.json súbor: ${fileName}`);
+            addDebugLog(`🔐 Checking package-lock.json file: ${fileName}`);
             
-            // Kontrola hlavných dependencies v package-lock.json
+            // Check main dependencies in package-lock.json
             if (lockData.dependencies) {
                 const depCount = Object.keys(lockData.dependencies).length;
-                addDebugLog(`📦 Nájdených ${depCount} balíčkov v dependencies (lock format)`);
+                addDebugLog(`📦 Found ${depCount} packages in dependencies (lock format)`);
                 
                 for (const [packageName, packageInfo] of Object.entries(lockData.dependencies)) {
                     if (packageInfo.version) {
                         const fullPackageName = `${packageName}@${packageInfo.version}`;
-                        addDebugLog(`  ⚙️ Kontrolujem lock: ${packageName} -> ${fullPackageName}`);
+                        addDebugLog(`  ⚙️ Checking lock: ${packageName} -> ${fullPackageName}`);
                         
                         if (suspiciousPackagesSet.has(fullPackageName)) {
-                            addDebugLog(`  🚨 PRESNÁ ZHODA (lock): ${fullPackageName}`);
+                            addDebugLog(`  🚨 EXACT MATCH (lock): ${fullPackageName}`);
                             found.push({
                                 package: fullPackageName,
                                 section: 'dependencies (lock)',
@@ -884,7 +888,7 @@
                             });
                         }
                         else if (suspiciousPackageNames.has(packageName)) {
-                            addDebugLog(`  ⚠️ ZHODA NÁZVU (lock): ${packageName} (verzia: ${packageInfo.version})`);
+                            addDebugLog(`  ⚠️ NAME MATCH (lock): ${packageName} (version: ${packageInfo.version})`);
                             found.push({
                                 package: packageName,
                                 section: 'dependencies (lock)',
@@ -899,19 +903,19 @@
                 }
             }
             
-            // Kontrola packages v novšom formáte package-lock.json
+            // Check packages in newer package-lock.json format
             if (lockData.packages) {
                 const packagesCount = Object.keys(lockData.packages).length - 1; // -1 for root
-                addDebugLog(`📦 Nájdených ${packagesCount} balíčkov v packages (new lock format)`);
+                addDebugLog(`📦 Found ${packagesCount} packages in packages (new lock format)`);
                 
                 for (const [packagePath, packageInfo] of Object.entries(lockData.packages)) {
                     if (packagePath !== '' && packageInfo.version) { // Skip root package
                         const packageName = packagePath.replace('node_modules/', '');
                         const fullPackageName = `${packageName}@${packageInfo.version}`;
-                        addDebugLog(`  ⚙️ Kontrolujem packages: ${packageName} -> ${fullPackageName}`);
+                        addDebugLog(`  ⚙️ Checking packages: ${packageName} -> ${fullPackageName}`);
                         
                         if (suspiciousPackagesSet.has(fullPackageName)) {
-                            addDebugLog(`  🚨 PRESNÁ ZHODA (packages): ${fullPackageName}`);
+                            addDebugLog(`  🚨 EXACT MATCH (packages): ${fullPackageName}`);
                             found.push({
                                 package: fullPackageName,
                                 section: 'packages (lock)',
@@ -920,7 +924,7 @@
                             });
                         }
                         else if (suspiciousPackageNames.has(packageName)) {
-                            addDebugLog(`  ⚠️ ZHODA NÁZVU (packages): ${packageName} (verzia: ${packageInfo.version})`);
+                            addDebugLog(`  ⚠️ NAME MATCH (packages): ${packageName} (version: ${packageInfo.version})`);
                             found.push({
                                 package: packageName,
                                 section: 'packages (lock)',
@@ -935,7 +939,7 @@
                 }
             }
             
-            addDebugLog(`📊 V lock súbore nájdených ${found.length} podozrivých balíčkov`);
+            addDebugLog(`📊 Found ${found.length} suspicious packages in lock file`);
             return found;
         }
 
@@ -943,14 +947,14 @@
             const content = document.getElementById('jsonContent').value.trim();
             const resultsDiv = document.getElementById('results');
             
-            // Vymazanie predchádzajúceho debug logu
+            // Clear previous debug log
             debugLog = [];
-            addDebugLog('🚀 Spúšťam kontrolu balíčkov...');
-            addDebugLog(`📋 Mám ${suspiciousPackages.length} podozrivých balíčkov na kontrolu`);
+            addDebugLog('🚀 Starting package check...');
+            addDebugLog(`📋 I have ${suspiciousPackages.length} suspicious packages to check`);
             
             if (!content) {
-                resultsDiv.innerHTML = '<div class="error">❌ Vložte obsah súboru alebo nahrajte súbor.</div>';
-                addDebugLog('❌ Žiadny obsah na kontrolu');
+                resultsDiv.innerHTML = '<div class="error">❌ Please paste file content or upload a file.</div>';
+                addDebugLog('❌ No content to check');
                 return;
             }
 
@@ -964,7 +968,7 @@
             const fileSections = content.split(/\/\* .+? \*\//);
             const fileNames = content.match(/\/\* (.+?) \*\//g) || ['Manual Input'];
             
-            addDebugLog(`📁 Nájdených ${fileSections.filter(s => s.trim()).length} súborov na kontrolu`);
+            addDebugLog(`📁 Found ${fileSections.filter(s => s.trim()).length} files to check`);
 
             fileSections.forEach((section, index) => {
                 const trimmedSection = section.trim();
@@ -973,15 +977,15 @@
                 const fileName = fileNames[index] ? fileNames[index].replace(/\/\* (.+?) \*\//, '$1') : 'Manual Input';
                 filesChecked++;
                 
-                addDebugLog(`\n📂 === KONTROLA SÚBORU ${filesChecked}: ${fileName} ===`);
+                addDebugLog(`\n📂 === CHECKING FILE ${filesChecked}: ${fileName} ===`);
 
                 try {
                     const jsonData = JSON.parse(trimmedSection);
-                    addDebugLog('✅ JSON úspešne parsovaný');
+                    addDebugLog('✅ JSON successfully parsed');
                     
-                    // Kontrola package.json formátu
+                    // Check package.json format
                     if (jsonData.dependencies || jsonData.devDependencies || jsonData.peerDependencies || jsonData.optionalDependencies) {
-                        addDebugLog('📦 Detekovaný package.json formát');
+                        addDebugLog('📦 Detected package.json format');
                         
                         const deps = checkDependencies(jsonData.dependencies, 'dependencies', fileName);
                         const devDeps = checkDependencies(jsonData.devDependencies, 'devDependencies', fileName);
@@ -996,9 +1000,9 @@
                         totalPackages += Object.keys(jsonData.optionalDependencies || {}).length;
                     }
                     
-                    // Kontrola package-lock.json formátu
+                    // Check package-lock.json format
                     if (jsonData.lockfileVersion || jsonData.packages || (jsonData.dependencies && Object.values(jsonData.dependencies)[0]?.version)) {
-                        addDebugLog('🔐 Detekovaný package-lock.json formát');
+                        addDebugLog('🔐 Detected package-lock.json format');
                         
                         const lockSuspicious = checkPackageLock(jsonData, fileName);
                         allSuspicious = allSuspicious.concat(lockSuspicious);
@@ -1011,39 +1015,39 @@
                         }
                     }
                     
-                    addDebugLog(`📂 Súbor ${fileName} dokončený`);
+                    addDebugLog(`📂 File ${fileName} completed`);
                     
                 } catch (error) {
-                    addDebugLog(`❌ CHYBA pri parsovaní ${fileName}: ${error.message}`);
-                    resultsDiv.innerHTML += `<div class="error">❌ Chyba pri parsovaní JSON súboru ${fileName}: ${error.message}</div>`;
+                    addDebugLog(`❌ ERROR parsing ${fileName}: ${error.message}`);
+                    resultsDiv.innerHTML += `<div class="error">❌ Error parsing JSON file ${fileName}: ${error.message}</div>`;
                     return;
                 }
             });
 
-            addDebugLog(`\n🏁 === FINÁLNE VÝSLEDKY ===`);
-            addDebugLog(`📁 Kontrolovaných súborov: ${filesChecked}`);
-            addDebugLog(`📦 Celkovo balíčkov: ${totalPackages}`);
-            addDebugLog(`🚨 Podozrivých balíčkov: ${allSuspicious.length}`);
+            addDebugLog(`\n🏁 === FINAL RESULTS ===`);
+            addDebugLog(`📁 Files checked: ${filesChecked}`);
+            addDebugLog(`📦 Total packages: ${totalPackages}`);
+            addDebugLog(`🚨 Suspicious packages: ${allSuspicious.length}`);
 
-            // Zobrazenie výsledkov
+            // Display results
             let html = '';
             
-            // Štatistiky
+            // Statistics
             html += `<div class="stats">
-                <h3>📊 Štatistiky kontroly</h3>
-                <p><strong>Kontrolované súbory:</strong> ${filesChecked}</p>
-                <p><strong>Celkový počet balíčkov:</strong> ${totalPackages}</p>
-                <p><strong>Nájdené podozrivé balíčky:</strong> ${allSuspicious.length}</p>
+                <h3>📊 Check Statistics</h3>
+                <p><strong>Files checked:</strong> ${filesChecked}</p>
+                <p><strong>Total packages:</strong> ${totalPackages}</p>
+                <p><strong>Suspicious packages found:</strong> ${allSuspicious.length}</p>
             </div>`;
 
             if (allSuspicious.length === 0) {
-                addDebugLog('✅ Kontrola dokončená - žiadne podozrivé balíčky');
-                html += '<div class="success">✅ <strong>Výborné!</strong> Nenašli sa žiadne podozrivé balíčky zo známych bezpečnostných hrozieb.</div>';
+                addDebugLog('✅ Check completed - no suspicious packages');
+                html += '<div class="success">✅ <strong>Excellent!</strong> No suspicious packages from known security threats were found.</div>';
             } else {
-                addDebugLog('⚠️ Kontrola dokončená - nájdené podozrivé balíčky!');
-                html += `<div class="error">⚠️ <strong>VAROVANIE!</strong> Nájdené ${allSuspicious.length} podozrivé balíčky:</div>`;
+                addDebugLog('⚠️ Check completed - suspicious packages found!');
+                html += `<div class="error">⚠️ <strong>WARNING!</strong> Found ${allSuspicious.length} suspicious packages:</div>`;
                 
-                // Grupovanie podľa súborov
+                // Group by files
                 const groupedBySuspicious = {};
                 allSuspicious.forEach(item => {
                     const key = item.package;
@@ -1061,23 +1065,23 @@
                     
                     items.forEach(item => {
                         const matchInfo = item.matchType === 'exact' ? 
-                            'Presná zhoda (názov + verzia)' : 
-                            `Zhoda názvu (nájdená verzia: ${item.installedVersion})`;
+                            'Exact match (name + version)' : 
+                            `Name match (found version: ${item.installedVersion})`;
                         
-                        html += `<div>📁 <strong>Súbor:</strong> ${item.fileName} | <strong>Sekcia:</strong> ${item.section} | <strong>Typ:</strong> ${matchInfo}</div>`;
+                        html += `<div>📁 <strong>File:</strong> ${item.fileName} | <strong>Section:</strong> ${item.section} | <strong>Type:</strong> ${matchInfo}</div>`;
                     });
                     
                     html += `</div></div>`;
                 });
 
                 html += `<div class="warning">
-                    <h4>🛡️ Odporúčania:</h4>
+                    <h4>🛡️ Recommendations:</h4>
                     <ul>
-                        <li>Okamžite odstráňte tieto podozrivé balíčky z vašich projektov</li>
-                        <li>Skontrolujte všetky súbory v projekte na možné škodlivé zmeny</li>
-                        <li>Aktualizujte package.json a package-lock.json súbory</li>
-                        <li>Spustite <code>npm audit</code> pre ďalšie bezpečnostné kontroly</li>
-                        <li>Kontaktujte váš bezpečnostný tím</li>
+                        <li>Immediately remove these suspicious packages from your projects</li>
+                        <li>Check all files in the project for possible malicious changes</li>
+                        <li>Update package.json and package-lock.json files</li>
+                        <li>Run <code>npm audit</code> for additional security checks</li>
+                        <li>Contact your security team</li>
                     </ul>
                 </div>`;
             }
@@ -1085,7 +1089,7 @@
             resultsDiv.innerHTML = html;
             resultsDiv.scrollIntoView({ behavior: 'smooth' });
             
-            addDebugLog('🏁 Kontrola úplne dokončená');
+            addDebugLog('🏁 Check completely finished');
         }
     </script>
 </body>
